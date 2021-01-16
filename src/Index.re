@@ -28,10 +28,9 @@ let makeContainer = text => {
 };
 
 // All 4 examples.
+ReactDOMRe.render(<Game />, makeContainer("Game"));
 ReactDOMRe.render(
-  <BlinkingGreeting>
-    {React.string("Hello!")}
-  </BlinkingGreeting>,
+  <BlinkingGreeting> {React.string("Hello!")} </BlinkingGreeting>,
   makeContainer("Blinking Greeting"),
 );
 
