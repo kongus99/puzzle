@@ -11,6 +11,7 @@ let targetPics =
   |> Array.map(x => Some(x));
 let resetTime = 10;
 let noPic = "res/rect.svg";
+let picAmount = 5;
 
 type timer =
   | Uninitialized
@@ -33,13 +34,14 @@ let initialState = () => {
     timer: Uninitialized,
     pics:
       (targetPics |> Belt.Array.shuffle)
-      ->Belt.Array.concat(Array.init(5, _ => None)),
+      ->Belt.Array.concat(Array.init(picAmount, _ => None)),
     drag: None,
   };
 };
 
 let tryFinishingGame = (time, state) =>
-  if (Belt.Array.eq(Belt.Array.sliceToEnd(state.pics, 5), targetPics, (x, y) =>
+  if (Belt.Array.eq(
+        Belt.Array.sliceToEnd(state.pics, picAmount), targetPics, (x, y) =>
         Belt.Option.eq(x, y, (a, b) => a == b)
       )) {
     {...state, timer: Stopped(time, resetTime)};
@@ -83,7 +85,7 @@ let reducer = (state, action) => {
 };
 
 [@react.component]
-let make = () => {
+let make = (~user: string) => {
   let (state, dispatch) = React.useReducer(reducer, initialState());
 
   React.useEffect0(() => {
@@ -94,14 +96,14 @@ let make = () => {
     <div style=containerStyle>
       {React.string(
          switch (state.timer) {
-         | Uninitialized => "Please click and drag a letter to start the game"
+         | Uninitialized => {j|Hello $user, please click and drag a letter to start the game!|j}
          | Started(t) => {j|Time: $t seconds|j}
          | Stopped(gameTime, restartTime) => {j|Congratulations, your time is: $gameTime seconds. The game will reset in $restartTime seconds|j}
          },
        )}
     </div>
     <div style=containerStyle>
-      {Belt.Array.slice(state.pics, ~offset=0, ~len=5)
+      {Belt.Array.slice(state.pics, ~offset=0, ~len=picAmount)
        |> Array.mapi((i, op) =>
             Belt.Option.mapWithDefault(op, <div />, p =>
               <img
@@ -114,7 +116,7 @@ let make = () => {
        |> React.array}
     </div>
     <div style=containerStyle>
-      {Belt.Array.sliceToEnd(state.pics, 5)
+      {Belt.Array.sliceToEnd(state.pics, picAmount)
        |> Array.mapi((i, pic) =>
             Belt.Option.mapWithDefault(
               pic,
@@ -123,18 +125,18 @@ let make = () => {
                 onDragOver={e => ReactEvent.Mouse.preventDefault(e)}
                 onDrop={e => {
                   ReactEvent.Mouse.preventDefault(e);
-                  dispatch(Drop(i + 5));
+                  dispatch(Drop(i + picAmount));
                 }}
               />,
               p =>
               <img
                 src=p
                 draggable=true
-                onDragStart={_e => dispatch(Drag(i + 5))}
+                onDragStart={_e => dispatch(Drag(i + picAmount))}
                 onDragOver={e => ReactEvent.Mouse.preventDefault(e)}
                 onDrop={e => {
                   ReactEvent.Mouse.preventDefault(e);
-                  dispatch(Drop(i + 5));
+                  dispatch(Drop(i + picAmount));
                 }}
               />
             )
