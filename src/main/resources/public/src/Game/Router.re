@@ -1,26 +1,38 @@
-type state = option(string);
+type state = {
+  user: option(string),
+  refresh: bool,
+};
 
 type action =
-  | SubmitUser(string);
+  | SubmitUser(string)
+  | RefreshBoard;
 
-let initialState = None;
+let initialState = {user: None, refresh: false};
 
 let reducer = (state, action) => {
   switch (action) {
   | SubmitUser(u) =>
     if (String.trim(u) |> String.length > 0) {
-      Some(String.trim(u));
+      {...state, user: Some(String.trim(u))};
     } else {
-      None;
+      {...state, user: None};
     }
+  | RefreshBoard => {...state, refresh: !state.refresh}
   };
 };
 
 [@react.component]
 let make = () => {
   let (state, dispatch) = React.useReducer(reducer, initialState);
-  switch (state) {
-  | None => <Intro onSubmit={v => dispatch(SubmitUser(v))} />
-  | Some(u) => <Game user=u />
-  };
+  <div>
+    <Container title="Puzzle Game">
+      {switch (state.user) {
+       | None => <Intro onSubmit={v => dispatch(SubmitUser(v))} />
+       | Some(u) => <Game user=u onFinish={_ => dispatch(RefreshBoard)} />
+       }}
+    </Container>
+    <Container title="Leader Board">
+      <LeaderBoard refresh={state.refresh} />
+    </Container>
+  </div>;
 };

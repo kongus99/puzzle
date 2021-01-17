@@ -39,66 +39,68 @@ let initialState = () => {
   };
 };
 
-let tryFinishingGame = (time, state) =>
-  if (Belt.Array.eq(
-        Belt.Array.sliceToEnd(state.pics, picAmount), targetPics, (x, y) =>
-        Belt.Option.eq(x, y, (a, b) => a == b)
-      )) {
-    {...state, timer: Stopped(time, resetTime)};
-  } else {
-    state;
-  };
-
-let movePicture = (source, target, state) => {
-  let s = state.pics[source];
-  state.pics[source] = state.pics[target];
-  state.pics[target] = s;
-  {...state, drag: None};
-};
-
-let reducer = (state, action) => {
-  switch (action) {
-  | Drag(index) =>
-    switch (state.timer) {
-    | Started(_) => {...state, drag: Some(index)}
-    | _ => {...state, timer: Started(0), drag: Some(index)}
-    }
-  | Tick =>
-    switch (state.timer) {
-    | Started(t) => {...state, timer: Started(t + 1)}
-    | Stopped(result, restart) =>
-      if (restart > 1) {
-        {...state, timer: Stopped(result, restart - 1)};
-      } else {
-        initialState();
-      }
-
-    | Uninitialized => state
-    }
-  | Drop(target) =>
-    switch (state.timer, state.drag) {
-    | (Started(time), Some(source)) =>
-      state |> movePicture(source, target) |> tryFinishingGame(time)
-    | _ => state
-    }
-  };
-};
-
 [@react.component]
-let make = (~user: string) => {
+let make = (~user: string, ~onFinish: Score.score => unit) => {
+  let movePicture = (source, target, state) => {
+    let s = state.pics[source];
+    state.pics[source] = state.pics[target];
+    state.pics[target] = s;
+    {...state, drag: None};
+  };
+
+  let tryFinishingGame = (time, state) =>
+    if (Belt.Array.eq(
+          Belt.Array.sliceToEnd(state.pics, picAmount), targetPics, (x, y) =>
+          Belt.Option.eq(x, y, (a, b) => a == b)
+        )) {
+      Score.post({name: user, result: time}, s => onFinish(s));
+      {...state, timer: Stopped(time, resetTime)};
+    } else {
+      state;
+    };
+
+  let reducer = (state, action) => {
+    switch (action) {
+    | Drag(index) =>
+      switch (state.timer) {
+      | Started(_) => {...state, drag: Some(index)}
+      | _ => {...state, timer: Started(0), drag: Some(index)}
+      }
+    | Tick =>
+      switch (state.timer) {
+      | Started(t) => {...state, timer: Started(t + 1)}
+      | Stopped(result, restart) =>
+        if (restart > 1) {
+          {...state, timer: Stopped(result, restart - 1)};
+        } else {
+          initialState();
+        }
+
+      | Uninitialized => state
+      }
+    | Drop(target) =>
+      switch (state.timer, state.drag) {
+      | (Started(time), Some(source)) =>
+        state |> movePicture(source, target) |> tryFinishingGame(time)
+      | _ => state
+      }
+    };
+  };
+
   let (state, dispatch) = React.useReducer(reducer, initialState());
 
   React.useEffect0(() => {
     let id = Js.Global.setInterval(() => dispatch(Tick), 1000);
     Some(() => Js.Global.clearInterval(id));
   });
+
   <div>
     <div style=containerStyle>
       {React.string(
          switch (state.timer) {
          | Uninitialized => {j|Hello $user, please click and drag a letter to start the game!|j}
          | Started(t) => {j|Time: $t seconds|j}
-         | Stopped(gameTime, restartTime) => {j|Congratulations, your time is: $gameTime seconds. The game will reset in $restartTime seconds|j}
+         | Stopped(gameTime, restartTime) => {j|Congratulations $user, your time is: $gameTime seconds. The game will reset in $restartTime seconds|j}
          },
        )}
     </div>
