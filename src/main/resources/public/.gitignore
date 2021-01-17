@@ -7,7 +7,7 @@ npm-debug.log
 /bundleOutput/
 *.bs.js
 .cache
-
+/bs
 ### IntelliJ IDEA ###
 .idea
 .idea/
